@@ -16,6 +16,15 @@ local showMarker = false
 local markerLocation
 local zoneCombo = nil
 local returningToStation = false
+local lvl8 = false
+local lvl7 = false
+local lvl6 = false
+local lvl5 = false
+local lvl4 = false
+local lvl3 = false
+local lvl2 = false
+local lvl1 = false
+local lvl0 = false
 
 -- Functions
 
@@ -100,7 +109,7 @@ local function MenuGarage()
         truckMenu[#truckMenu+1] = {
             header = Config.Vehicles[k],
             params = {
-                event = "qb-trucker:client:TakeOutVehicle",
+                event = "qb-truckerjob:client:TakeOutVehicle",
                 args = {
                     vehicle = k
                 }
@@ -196,7 +205,11 @@ local function CreateZone(type, number)
                     TriggerEvent('qb-truckerjob:client:Vehicle')
                 elseif type == "stores" then
                     markerLocation = coords
-                    QBCore.Functions.Notify(Lang:t("mission.store_reached"))
+                    if Config.NotifyType == 'qb' then
+                        QBCore.Functions.Notify(Lang:t("mission.store_reached"), "info", 5500)
+                    elseif Config.NotifyType == "okok" then
+                        exports['okokNotify']:Alert("DESTINATION REACHED", Lang:t("mission.store_reached"), 5500, "info")
+                    end 
                     ShowMarker(true)
                     SetDelivering(true)
                 end
@@ -249,7 +262,11 @@ local function getNewLocation()
         SetBlipRoute(CurrentBlip, true)
         SetBlipRouteColour(CurrentBlip, 3)
     else
-        QBCore.Functions.Notify(Lang:t("success.payslip_time"))
+        if Config.NotifyType == 'qb' then
+            QBCore.Functions.Notify(Lang:t("success.payslip_time"), "success", 3500)
+        elseif Config.NotifyType == "okok" then
+            exports['okokNotify']:Alert("PAYSLIP", Lang:t("success.payslip_time"), 3500, "success")
+        end 
         if CurrentBlip ~= nil then
             RemoveBlip(CurrentBlip)
             ClearAllBlipRoutes()
@@ -290,23 +307,44 @@ end
 local function GetInTrunk()
     local ped = PlayerPedId()
     if IsPedInAnyVehicle(ped, false) then
-        return QBCore.Functions.Notify(Lang:t("error.get_out_vehicle"), "error")
+        if Config.NotifyType == 'qb' then
+            QBCore.Functions.Notify(Lang:t("error.get_out_vehicle"), "error", 3500)
+        elseif Config.NotifyType == "okok" then
+            exports['okokNotify']:Alert("GET OUT", Lang:t("error.get_out_vehicle"), 3500, "error")
+        end 
+        return
     end
     local pos = GetEntityCoords(ped, true)
     local vehicle = GetVehiclePedIsIn(ped, true)
     if not isTruckerVehicle(vehicle) or CurrentPlate ~= QBCore.Functions.GetPlate(vehicle) then
-        return QBCore.Functions.Notify(Lang:t("error.vehicle_not_correct"), "error")
+        if Config.NotifyType == 'qb' then
+            QBCore.Functions.Notify(Lang:t("error.vehicle_not_correct"), "error", 3500)
+        elseif Config.NotifyType == "okok" then
+            exports['okokNotify']:Alert("WRONG VEHICLE", Lang:t("error.vehicle_not_correct"), 3500, "error")
+        end 
+        return
     end
     if not BackDoorsOpen(vehicle) then
-        return QBCore.Functions.Notify(Lang:t("error.backdoors_not_open"), "error")
+        if Config.NotifyType == 'qb' then
+            QBCore.Functions.Notify(Lang:t("error.backdoors_not_open"), "error", 3500)
+        elseif Config.NotifyType == "okok" then
+            exports['okokNotify']:Alert("OPEN DOORS", Lang:t("error.backdoors_not_open"), 3500, "error")
+        end 
+        return
     end
     local trunkpos = GetOffsetFromEntityInWorldCoords(vehicle, 0, -2.5, 0)
     if #(pos - vector3(trunkpos.x, trunkpos.y, trunkpos.z)) > 1.5 then
-        return QBCore.Functions.Notify(Lang:t("error.too_far_from_trunk"), "error")
+        if Config.NotifyType == 'qb' then
+            QBCore.Functions.Notify(Lang:t("error.too_far_from_trunk"), "error", 3500)
+        elseif Config.NotifyType == "okok" then
+            exports['okokNotify']:Alert("GET CLOSER", Lang:t("error.too_far_from_trunk"), 3500, "error")
+        end 
+        return
     end
     if isWorking then return end
     isWorking = true
-    QBCore.Functions.Progressbar("work_carrybox", Lang:t("mission.take_box"), 2000, false, true, {
+    local getbox = math.random(Config.GetBoxtimelow*1000, Config.GetBoxtimehigh*1000)
+    QBCore.Functions.Progressbar("work_carrybox", Lang:t("mission.take_box"), getbox, false, true, {
         disableMovement = true,
         disableCarMovement = true,
         disableMouse = false,
@@ -323,7 +361,11 @@ local function GetInTrunk()
     end, function() -- Cancel
         isWorking = false
         StopAnimTask(ped, "anim@gangops@facility@servers@", "hotwire", 1.0)
-        QBCore.Functions.Notify(Lang:t("error.cancelled"), "error")
+        if Config.NotifyType == 'qb' then
+            QBCore.Functions.Notify(Lang:t("error.cancelled"), "error", 3500)
+        elseif Config.NotifyType == "okok" then
+            exports['okokNotify']:Alert("...", Lang:t("error.cancelled"), 3500, "error")
+        end 
     end)
 end
 
@@ -332,12 +374,14 @@ local function Deliver()
     TriggerEvent('animations:client:EmoteCommandStart', {"c"})
     Wait(500)
     TriggerEvent('animations:client:EmoteCommandStart', {"bumbin"})
-    QBCore.Functions.Progressbar("work_dropbox", Lang:t("mission.deliver_box"), 2000, false, true, {
+    local dropbox = math.random(Config.DropBoxtimelow*1000,Config.DropBoxtimehigh*1000)
+    QBCore.Functions.Progressbar("work_dropbox", Lang:t("mission.deliver_box"), dropbox, false, true, {
         disableMovement = true,
         disableCarMovement = true,
         disableMouse = false,
         disableCombat = true,
     }, {}, {}, {}, function() -- Done
+        TriggerEvent('animations:client:EmoteCommandStart', {"c"})
         isWorking = false
         ClearPedTasks(PlayerPedId())
         hasBox = false
@@ -348,7 +392,7 @@ local function Deliver()
             exports['qb-core']:HideText()
             Delivering = false
             showMarker = false
-            TriggerServerEvent('qb-trucker:server:nano')
+            TriggerServerEvent('qb-truckerjob:server:nano')
             if CurrentBlip ~= nil then
                 RemoveBlip(CurrentBlip)
                 ClearAllBlipRoutes()
@@ -359,21 +403,170 @@ local function Deliver()
             currentCount = 0
             JobsDone = JobsDone + 1
             if JobsDone == Config.MaxDrops then
-                QBCore.Functions.Notify(Lang:t("mission.return_to_station"))
+                if Config.NotifyType == 'qb' then
+                    QBCore.Functions.Notify(Lang:t("mission.return_to_station"), "info", 3500)
+                elseif Config.NotifyType == "okok" then
+                    exports['okokNotify']:Alert("VAN EMPTY", Lang:t("mission.return_to_station"), 3500, "info")
+                end 
                 returnToStation()
+                Wait(1000)
+                TriggerEvent('qb-truckerjob:client:mzSkills')
             else
-                QBCore.Functions.Notify(Lang:t("mission.goto_next_point"))
+                if Config.NotifyType == 'qb' then
+                    QBCore.Functions.Notify(Lang:t("mission.goto_next_point"), "info", 3500)
+                elseif Config.NotifyType == "okok" then
+                    exports['okokNotify']:Alert("DELIVERY COMPLETE", Lang:t("mission.goto_next_point"), 3500, "info")
+                end 
                 getNewLocation()
+                Wait(1000)
+                TriggerEvent('qb-truckerjob:client:mzSkills')
             end
         else
-            QBCore.Functions.Notify(Lang:t("mission.another_box"))
+            if Config.NotifyType == 'qb' then
+                QBCore.Functions.Notify(Lang:t("mission.another_box"), "info", 3500)
+            elseif Config.NotifyType == "okok" then
+                exports['okokNotify']:Alert("GET ANOTHER BOX", Lang:t("mission.another_box"), 3500, "info")
+            end 
         end
     end, function() -- Cancel
         isWorking = false
         ClearPedTasks(PlayerPedId())
-        QBCore.Functions.Notify(Lang:t("error.cancelled"), "error")
+        if Config.NotifyType == 'qb' then
+            QBCore.Functions.Notify(Lang:t("error.cancelled"), "error", 3500)
+        elseif Config.NotifyType == "okok" then
+            exports['okokNotify']:Alert("...", Lang:t("error.cancelled"), 3500, "error")
+        end 
     end)
 end
+
+RegisterNetEvent("qb-truckerjob:client:mzSkills", function()
+    if Config.mzskills then 
+        local BetterXP = math.random(Config.DriverXPlow, Config.DriverXPhigh)
+        local xpmultiple = math.random(1, 4)
+        if xpmultiple >= 3 then
+            chance = BetterXP
+        elseif xpmultiple < 3 then
+            chance = Config.DriverXPlow
+        end
+        exports["mz-skills"]:UpdateSkill("Driving", chance) 
+        Wait(1000)
+        if Config.BonusChance >= math.random(1, 100) then
+            exports["mz-skills"]:CheckSkill("Driving", 12800, function(hasskill)
+                if hasskill then
+                    lvl8 = true
+                end
+            end)
+            exports["mz-skills"]:CheckSkill("Driving", 6400, function(hasskill)
+                if hasskill then
+                    lvl7 = true
+                end
+            end)
+            exports["mz-skills"]:CheckSkill("Driving", 3200, function(hasskill)
+                if hasskill then
+                    lvl6 = true
+                end
+            end)
+            exports["mz-skills"]:CheckSkill("Driving", 1600, function(hasskill)
+                if hasskill then
+                    lvl5 = true
+                end
+            end)
+            exports["mz-skills"]:CheckSkill("Driving", 800, function(hasskill)
+                if hasskill then
+                    lvl4 = true
+                end
+            end)
+            exports["mz-skills"]:CheckSkill("Driving", 400, function(hasskill)
+                if hasskill then
+                    lvl3 = true
+                end
+            end)
+            exports["mz-skills"]:CheckSkill("Driving", 200, function(hasskill)
+                if hasskill then
+                    lvl2 = true
+                end
+            end)
+            exports["mz-skills"]:CheckSkill("Driving", 0, function(hasskill)
+                if hasskill then
+                    lvl1 = true
+                end
+            end)
+            if lvl8 == true then
+                TriggerServerEvent('qb-truckerjob:client:NPCBonusLevel8')
+                Wait(1500)
+                if Config.NotifyType == 'qb' then
+                    QBCore.Functions.Notify('Best delivery driver ever, going to give you a 5 star review!', "info", 3500)
+                elseif Config.NotifyType == "okok" then
+                    exports['okokNotify']:Alert("TIP", 'Best delivery driver ever, going to give you a 5 star review!', 3500, "info")
+                end 
+                lvl8 = false
+            elseif lvl7 == true then
+                TriggerServerEvent('qb-truckerjob:client:NPCBonusLevel7')
+                Wait(1500)
+                if Config.NotifyType == 'qb' then
+                    QBCore.Functions.Notify('Best delivery driver ever, going to give you a 5 star review!', "info", 3500)
+                elseif Config.NotifyType == "okok" then
+                    exports['okokNotify']:Alert("TIP", 'Best delivery driver ever, going to give you a 5 star review!', 3500, "info")
+                end 
+                lvl7 = false
+            elseif lvl6 == true then
+                TriggerServerEvent('qb-truckerjob:client:NPCBonusLevel6')
+                Wait(1500)
+                if Config.NotifyType == 'qb' then
+                    QBCore.Functions.Notify('Hey, do you always drive so well? You got me here quick smart!', "info", 3500)
+                elseif Config.NotifyType == "okok" then
+                    exports['okokNotify']:Alert("TIP", 'Hey, do you always drive so well? You got me here quick smart!', 3500, "info")
+                end 
+                lvl6 = false
+            elseif lvl5 == true then
+                TriggerServerEvent('qb-truckerjob:client:NPCBonusLevel5')
+                Wait(1500)
+                if Config.NotifyType == 'qb' then
+                    QBCore.Functions.Notify('Hey, do you always drive so well? You got me here quick smart!', "info", 3500)
+                elseif Config.NotifyType == "okok" then
+                    exports['okokNotify']:Alert("TIP", 'Hey, do you always drive so well? You got me here quick smart!', 3500, "info")
+                end 
+                lvl5 = false
+            elseif lvl4 == true then
+                TriggerServerEvent('qb-truckerjob:client:NPCBonusLevel4')
+                Wait(1500)
+                if Config.NotifyType == 'qb' then
+                    QBCore.Functions.Notify('Wow, these are in good condition, keep up the good work.', "info", 3500)
+                elseif Config.NotifyType == "okok" then
+                    exports['okokNotify']:Alert("TIP", 'Wow, these are in good condition, keep up the good work.', 3500, "info")
+                end 
+                lvl4 = false
+            elseif lvl3 == true then
+                TriggerServerEvent('qb-truckerjob:client:NPCBonusLevel3')
+                Wait(1500)
+                if Config.NotifyType == 'qb' then
+                    QBCore.Functions.Notify('Wow, these are in good condition, keep up the good work.', "info", 3500)
+                elseif Config.NotifyType == "okok" then
+                    exports['okokNotify']:Alert("TIP", 'Wow, these are in good condition, keep up the good work.', 3500, "info")
+                end 
+                lvl3 = false
+            elseif lvl2 == true then
+                TriggerServerEvent('qb-truckerjob:client:NPCBonusLevel2')
+                Wait(1500)
+                if Config.NotifyType == 'qb' then
+                    QBCore.Functions.Notify('Thank you for the packages, take a little change for your trouble.', "info", 3500)
+                elseif Config.NotifyType == "okok" then
+                    exports['okokNotify']:Alert("TIP", 'Thank you for the packages, take a little change for your trouble.', 3500, "info")
+                end 
+                lvl2 = false
+            elseif lvl1 == true then 
+                TriggerServerEvent('qb-truckerjob:client:NPCBonusLevel1')
+                Wait(1500)
+                if Config.NotifyType == 'qb' then
+                    QBCore.Functions.Notify('Thank you for the packages, take a little change for your trouble.', "info", 3500)
+                elseif Config.NotifyType == "okok" then
+                    exports['okokNotify']:Alert("TIP", 'Thank you for the packages, take a little change for your trouble.', 3500, "info")
+                end 
+                lvl1 = false
+            end
+        end
+    end
+end)
 
 -- Events
 
@@ -423,7 +616,7 @@ RegisterNetEvent('QBCore:Client:OnJobUpdate', function(JobInfo)
     end
 end)
 
-RegisterNetEvent('qb-trucker:client:SpawnVehicle', function()
+RegisterNetEvent('qb-truckerjob:client:SpawnVehicle', function()
     local vehicleInfo = selectedVeh
     local coords = Config.Locations["vehicle"].coords
     QBCore.Functions.TriggerCallback('QBCore:Server:SpawnVehicle', function(netId)
@@ -443,9 +636,9 @@ RegisterNetEvent('qb-trucker:client:SpawnVehicle', function()
     end, vehicleInfo, coords, true)
 end)
 
-RegisterNetEvent('qb-trucker:client:TakeOutVehicle', function(data)
+RegisterNetEvent('qb-truckerjob:client:TakeOutVehicle', function(data)
     local vehicleInfo = data.vehicle
-    TriggerServerEvent('qb-trucker:server:DoBail', true, vehicleInfo)
+    TriggerServerEvent('qb-truckerjob:server:DoBail', true, vehicleInfo)
     selectedVeh = vehicleInfo
 end)
 
@@ -454,7 +647,7 @@ RegisterNetEvent('qb-truckerjob:client:Vehicle', function()
         if GetPedInVehicleSeat(GetVehiclePedIsIn(PlayerPedId()), -1) == PlayerPedId() then
             if isTruckerVehicle(GetVehiclePedIsIn(PlayerPedId(), false)) then
                 DeleteVehicle(GetVehiclePedIsIn(PlayerPedId()))
-                TriggerServerEvent('qb-trucker:server:DoBail', false)
+                TriggerServerEvent('qb-truckerjob:server:DoBail', false)
                 if CurrentBlip ~= nil then
                     RemoveBlip(CurrentBlip)
                     ClearAllBlipRoutes()
@@ -463,13 +656,25 @@ RegisterNetEvent('qb-truckerjob:client:Vehicle', function()
                 if returningToStation or CurrentLocation then
                     ClearAllBlipRoutes()
                     returningToStation = false
-                    QBCore.Functions.Notify(Lang:t("mission.job_completed"), "success")
+                    if Config.NotifyType == 'qb' then
+                        QBCore.Functions.Notify(Lang:t("mission.job_completed"), "success", 3500)
+                    elseif Config.NotifyType == "okok" then
+                        exports['okokNotify']:Alert("JOB COMPLETE", Lang:t("mission.job_completed"), 3500, "success")
+                    end 
                 end
             else
-                QBCore.Functions.Notify(Lang:t("error.vehicle_not_correct"), 'error')
+                if Config.NotifyType == 'qb' then
+                    QBCore.Functions.Notify(Lang:t("error.vehicle_not_correct"), "error", 3500)
+                elseif Config.NotifyType == "okok" then
+                    exports['okokNotify']:Alert("WRONG VEHICLE", Lang:t("error.vehicle_not_correct"), 3500, "error")
+                end 
             end
         else
-            QBCore.Functions.Notify(Lang:t("error.no_driver"))
+            if Config.NotifyType == 'qb' then
+                QBCore.Functions.Notify(Lang:t("error.no_driver"), "error", 3500)
+            elseif Config.NotifyType == "okok" then
+                exports['okokNotify']:Alert("YOU MUST DRIVE", Lang:t("error.no_driver"), 3500, "error")
+            end 
         end
     else
         MenuGarage()
@@ -478,7 +683,7 @@ end)
 
 RegisterNetEvent('qb-truckerjob:client:PaySlip', function()
     if JobsDone > 0 then
-        TriggerServerEvent("qb-trucker:server:01101110", JobsDone)
+        TriggerServerEvent("qb-truckerjob:server:01101110", JobsDone)
         JobsDone = 0
         if #LocationsDone == #Config.Locations["stores"] then
             LocationsDone = {}
@@ -489,7 +694,11 @@ RegisterNetEvent('qb-truckerjob:client:PaySlip', function()
             CurrentBlip = nil
         end
     else
-        QBCore.Functions.Notify(Lang:t("error.no_work_done"), "error")
+        if Config.NotifyType == 'qb' then
+            QBCore.Functions.Notify(Lang:t("error.no_work_done"), "error", 3500)
+        elseif Config.NotifyType == "okok" then
+            exports['okokNotify']:Alert("DO SOME WORK", Lang:t("error.no_work_done"), 3500, "error")
+        end 
     end
 end)
 
@@ -511,7 +720,11 @@ CreateThread(function()
                     if #(GetEntityCoords(PlayerPedId()) - markerLocation) < 5 then
                         Deliver()
                     else
-                        QBCore.Functions.Notify(Lang:t("error.too_far_from_delivery"), "error")
+                        if Config.NotifyType == 'qb' then
+                            QBCore.Functions.Notify(Lang:t("error.too_far_from_delivery"), "error", 3500)
+                        elseif Config.NotifyType == "okok" then
+                            exports['okokNotify']:Alert("TOO FAR", Lang:t("error.too_far_from_delivery"), 3500, "error")
+                        end 
                     end
                 end
             end

@@ -1,10 +1,54 @@
 Config = {}
 
+Config.NotifyType = 'okok' -- notification type: 'qb' for qb-core standard notifications, 'okok' for okokNotify notifications
+
+Config.mzskills = true -- Set to 'false' if you do not wish to use mz-skills XP integration
+
+--Rare item drop
+Config.rareitem = 'cryptostick' -- Rare item received by player
+Config.rarechance = 100 -- Percentage chance of additional player drop upon completion of client taxi mission (set to 0 to disable)
+-- if mz-skills is set to 'true', the following parameters apply:
+Config.DriverXPlow = 1 -- Lowest possible XP given from a successful delivery.
+Config.DriverXPhigh = 3 -- Highest possible XP given from a successful delivery.
+-- BONUS PAYMENT 
+Config.BonusChance = 100 -- Percentage chance that the client pays the driver a bonus (to disable set to 0).
+--If a bonus is given, the following parameters apply:
+--Level 1
+Config.Level1Low = 1
+Config.Level1High = 5
+--Level 2
+Config.Level2Low = 3
+Config.Level2High = 8
+--Level 3
+Config.Level3Low = 5
+Config.Level3High = 12
+--Level 4
+Config.Level4Low = 8
+Config.Level4High = 16
+--Level 5
+Config.Level5Low = 10
+Config.Level5High = 18
+--Level 6
+Config.Level6Low = 13
+Config.Level6High = 22
+--Level 7
+Config.Level7Low = 15
+Config.Level7High = 26
+--Level 8
+Config.Level8Low = 18
+Config.Level8High = 30
+
 Config.UseTarget = GetConvar('UseTarget', 'false') == 'true'
 
 Config.BailPrice = 250
 Config.FixedLocation = false
 Config.MaxDrops = 10 -- amount of locations before being forced to return to station to reload
+
+--Progressbar times for getting and dropping off boxes
+Config.GetBoxtimelow = 1
+Config.GetBoxtimehigh = 2
+Config.DropBoxtimelow = 1
+Config.DropBoxtimehigh = 2
 
 Config.Locations = {
     ["main"] = {
